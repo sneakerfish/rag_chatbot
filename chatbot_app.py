@@ -67,6 +67,44 @@ class RAGChatbot:
             print(f"Error searching documents: {e}")
             return []
     
+    def search_documents_diverse(self, query: str, n_results: int = 10, max_per_source: int = 3) -> List[Dict[str, Any]]:
+        """Search for relevant documents ensuring diversity across sources"""
+        if not self.collection:
+            return []
+        
+        try:
+            # Get more results initially to allow for filtering
+            results = self.collection.query(
+                query_texts=[query],
+                n_results=n_results * 2,  # Get more results to filter from
+                include=["documents", "metadatas", "distances"]
+            )
+            
+            documents = []
+            if results['documents'] and results['documents'][0]:
+                source_counts = {}
+                
+                for i, doc in enumerate(results['documents'][0]):
+                    source = results['metadatas'][0][i].get('source', 'Unknown')
+                    
+                    # Limit documents per source
+                    if source_counts.get(source, 0) < max_per_source:
+                        documents.append({
+                            'text': doc,
+                            'metadata': results['metadatas'][0][i],
+                            'distance': results['distances'][0][i]
+                        })
+                        source_counts[source] = source_counts.get(source, 0) + 1
+                    
+                    # Stop if we have enough diverse results
+                    if len(documents) >= n_results:
+                        break
+                
+            return documents
+        except Exception as e:
+            print(f"Error searching documents: {e}")
+            return []
+    
     def get_available_models(self) -> List[str]:
         """Get list of available models from Ollama"""
         try:
@@ -169,9 +207,9 @@ def respond(message, history, model):
     if model not in available_models:
         return f"Error: Model '{model}' is not available. Available models: {', '.join(available_models)}"
     
-    # Search for relevant documents
+    # Search for relevant documents - INCREASE n_results
     search_start = time.time()
-    relevant_docs = chatbot.search_documents(message, n_results=3)
+    relevant_docs = chatbot.search_documents_diverse(message, n_results=10, max_per_source=3)
     search_time = time.time() - search_start
     print(f"ChromaDB search: {search_time:.2f}s, found {len(relevant_docs)} documents")
     
@@ -185,10 +223,11 @@ def respond(message, history, model):
     print("Calling Ollama...")
     response = chatbot.call_ollama(rag_prompt, model)
     
-    # Add source information if documents were found
+    # Add source information if documents were found - SHOW ALL SOURCES
     if relevant_docs:
         sources = [doc['metadata'].get('source', 'Unknown') for doc in relevant_docs]
-        source_info = f"\n\nSources: {', '.join(set(sources))}"
+        # Don't deduplicate - show all sources consulted
+        source_info = f"\n\nSources consulted: {', '.join(sources)}"
         response += source_info
     
     # Calculate total time
