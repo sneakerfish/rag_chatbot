@@ -12,12 +12,31 @@ from typing import List, Dict, Any
 import chromadb
 from chromadb.config import Settings
 import PyPDF2
-import hashlib
 import uuid
 
+from chunking import default_embedding_function, fixed_chunk_text, semantic_chunk_text
+
 class PDFIngester:
-    def __init__(self, chroma_host: str = "localhost", chroma_port: int = 8002):
-        """Initialize the PDF ingester with ChromaDB connection"""
+    def __init__(self, chroma_host: str = "localhost", chroma_port: int = 8002,
+                 chunking: str = "semantic", chunk_size: int = 1000, overlap: int = 200,
+                 breakpoint_percentile: float = 90.0, max_chunk_size: int = 1500,
+                 min_chunk_size: int = 200):
+        """Initialize the PDF ingester with ChromaDB connection and chunking options
+
+        chunking: "semantic" (default) places chunk boundaries where the topic
+        changes, so an explanation is not cut in half. "fixed" is the original
+        sliding window of chunk_size characters with overlap.
+        """
+        if chunking not in ("semantic", "fixed"):
+            raise ValueError(f"Unknown chunking strategy: {chunking}")
+        self.chunking = chunking
+        self.chunk_size = chunk_size
+        self.overlap = overlap
+        self.breakpoint_percentile = breakpoint_percentile
+        self.max_chunk_size = max_chunk_size
+        self.min_chunk_size = min_chunk_size
+        # Lazily created so "fixed" mode never loads the embedding model.
+        self._embed = None
         try:
             # Try basic connection first
             self.chroma_client = chromadb.HttpClient(
@@ -60,34 +79,21 @@ class PDFIngester:
             print(f"Error reading PDF {pdf_path}: {e}")
             return ""
     
-    def chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
-        """Split text into overlapping chunks"""
-        if not text.strip():
-            return []
-        
-        chunks = []
-        start = 0
-        
-        while start < len(text):
-            end = start + chunk_size
-            
-            # If this isn't the last chunk, try to break at a sentence boundary
-            if end < len(text):
-                # Look for sentence endings within the last 100 characters
-                for i in range(end, max(start + chunk_size - 100, start), -1):
-                    if text[i] in '.!?':
-                        end = i + 1
-                        break
-            
-            chunk = text[start:end].strip()
-            if chunk:
-                chunks.append(chunk)
-            
-            start = end - overlap
-            if start >= len(text):
-                break
-        
-        return chunks
+    def chunk_text(self, text: str) -> List[str]:
+        """Split text into chunks using the configured strategy"""
+        if self.chunking == "fixed":
+            return fixed_chunk_text(text, chunk_size=self.chunk_size, overlap=self.overlap)
+
+        if self._embed is None:
+            # Same model ChromaDB uses to embed the chunks for retrieval.
+            self._embed = default_embedding_function()
+        return semantic_chunk_text(
+            text,
+            self._embed,
+            breakpoint_percentile=self.breakpoint_percentile,
+            max_chunk_size=self.max_chunk_size,
+            min_chunk_size=self.min_chunk_size,
+        )
     
     def process_pdf_file(self, pdf_path: str) -> List[Dict[str, Any]]:
         """Process a single PDF file and return chunks with metadata"""
@@ -114,7 +120,8 @@ class PDFIngester:
                     'source': filename,
                     'chunk_index': i,
                     'total_chunks': len(chunks),
-                    'file_path': pdf_path
+                    'file_path': pdf_path,
+                    'chunking': self.chunking
                 }
             })
         
@@ -167,11 +174,37 @@ def main():
     parser.add_argument("folder", help="Path to folder containing PDF files")
     parser.add_argument("--host", default="localhost", help="ChromaDB host (default: localhost)")
     parser.add_argument("--port", type=int, default=8002, help="ChromaDB port (default: 8002)")
+    parser.add_argument("--chunking", choices=["semantic", "fixed"], default="semantic",
+                        help="Chunking strategy: 'semantic' breaks where the topic changes, "
+                             "'fixed' is a sliding character window (default: semantic)")
+    semantic = parser.add_argument_group("semantic chunking options")
+    semantic.add_argument("--breakpoint-percentile", type=float, default=90.0,
+                          help="Distance percentile above which a topic shift becomes a chunk "
+                               "boundary; lower means more, smaller chunks (default: 90)")
+    semantic.add_argument("--max-chunk-size", type=int, default=1500,
+                          help="Split chunks longer than this many characters (default: 1500)")
+    semantic.add_argument("--min-chunk-size", type=int, default=200,
+                          help="Merge chunks shorter than this many characters into a neighbour "
+                               "(default: 200)")
+    fixed = parser.add_argument_group("fixed chunking options")
+    fixed.add_argument("--chunk-size", type=int, default=1000,
+                       help="Characters per chunk (default: 1000)")
+    fixed.add_argument("--overlap", type=int, default=200,
+                       help="Characters shared between consecutive chunks (default: 200)")
     
     args = parser.parse_args()
     
     try:
-        ingester = PDFIngester(chroma_host=args.host, chroma_port=args.port)
+        ingester = PDFIngester(
+            chroma_host=args.host,
+            chroma_port=args.port,
+            chunking=args.chunking,
+            chunk_size=args.chunk_size,
+            overlap=args.overlap,
+            breakpoint_percentile=args.breakpoint_percentile,
+            max_chunk_size=args.max_chunk_size,
+            min_chunk_size=args.min_chunk_size,
+        )
         ingester.ingest_folder(args.folder)
         ingester.get_collection_info()
     except Exception as e:
