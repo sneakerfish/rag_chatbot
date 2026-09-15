@@ -9,10 +9,16 @@ import sys
 import argparse
 from pathlib import Path
 from typing import List, Dict, Any
+import unicodedata
 import chromadb
 from chromadb.config import Settings
-import PyPDF2
 import uuid
+
+try:
+    import pymupdf  # Much better word spacing than PyPDF2 and about 10x faster
+except ImportError:  # pragma: no cover
+    pymupdf = None
+import PyPDF2
 
 from chunking import default_embedding_function, fixed_chunk_text, semantic_chunk_text
 
@@ -20,7 +26,7 @@ class PDFIngester:
     def __init__(self, chroma_host: str = "localhost", chroma_port: int = 8002,
                  chunking: str = "semantic", chunk_size: int = 1000, overlap: int = 200,
                  breakpoint_percentile: float = 90.0, max_chunk_size: int = 1500,
-                 min_chunk_size: int = 200):
+                 min_chunk_size: int = 200, collection_name: str = "r_language_reference"):
         """Initialize the PDF ingester with ChromaDB connection and chunking options
 
         chunking: "semantic" (default) places chunk boundaries where the topic
@@ -50,7 +56,7 @@ class PDFIngester:
                 port=chroma_port,
                 settings=Settings(allow_reset=True, anonymized_telemetry=False)
             )
-        self.collection_name = "r_language_reference"
+        self.collection_name = collection_name
         self.collection = self._get_or_create_collection()
         
     def _get_or_create_collection(self):
@@ -67,14 +73,22 @@ class PDFIngester:
         return collection
     
     def extract_text_from_pdf(self, pdf_path: str) -> str:
-        """Extract text content from a PDF file"""
+        """Extract text content from a PDF file.
+
+        PyMuPDF is used when available: PyPDF2 runs words together on many
+        PDFs (e.g. anything built by Sphinx/LaTeX), which ruins both retrieval
+        and sentence splitting. Ligatures such as "fi" are folded to plain
+        letters so they match query text.
+        """
         try:
-            with open(pdf_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                text = ""
-                for page in pdf_reader.pages:
-                    text += page.extract_text() + "\n"
-                return text
+            if pymupdf is not None:
+                with pymupdf.open(pdf_path) as doc:
+                    text = "\n".join(page.get_text() for page in doc)
+            else:
+                with open(pdf_path, 'rb') as file:
+                    pdf_reader = PyPDF2.PdfReader(file)
+                    text = "\n".join((page.extract_text() or "") for page in pdf_reader.pages)
+            return unicodedata.normalize("NFKC", text)
         except Exception as e:
             print(f"Error reading PDF {pdf_path}: {e}")
             return ""
@@ -153,12 +167,16 @@ class PDFIngester:
             texts = [doc['text'] for doc in all_documents]
             metadatas = [doc['metadata'] for doc in all_documents]
             
-            # Add to ChromaDB collection
-            self.collection.add(
-                ids=ids,
-                documents=texts,
-                metadatas=metadatas
-            )
+            # Add to ChromaDB collection in batches; a single add is capped
+            # at a few thousand records by the server.
+            batch_size = 500
+            for i in range(0, len(ids), batch_size):
+                self.collection.add(
+                    ids=ids[i:i + batch_size],
+                    documents=texts[i:i + batch_size],
+                    metadatas=metadatas[i:i + batch_size]
+                )
+                print(f"  Stored {min(i + batch_size, len(ids))}/{len(ids)} chunks")
             
             print(f"Successfully ingested {len(all_documents)} chunks into ChromaDB")
         else:
@@ -174,6 +192,8 @@ def main():
     parser.add_argument("folder", help="Path to folder containing PDF files")
     parser.add_argument("--host", default="localhost", help="ChromaDB host (default: localhost)")
     parser.add_argument("--port", type=int, default=8002, help="ChromaDB port (default: 8002)")
+    parser.add_argument("--collection", default="r_language_reference",
+                        help="ChromaDB collection to store chunks in (default: r_language_reference)")
     parser.add_argument("--chunking", choices=["semantic", "fixed"], default="semantic",
                         help="Chunking strategy: 'semantic' breaks where the topic changes, "
                              "'fixed' is a sliding character window (default: semantic)")
@@ -198,6 +218,7 @@ def main():
         ingester = PDFIngester(
             chroma_host=args.host,
             chroma_port=args.port,
+            collection_name=args.collection,
             chunking=args.chunking,
             chunk_size=args.chunk_size,
             overlap=args.overlap,

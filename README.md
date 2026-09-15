@@ -75,7 +75,8 @@ python ingest.py ./r_docs --host localhost --port 8002
 ```
 
 The script will:
-- Extract text from all PDF files in the folder
+- Extract text from all PDF files in the folder (with PyMuPDF; PyPDF2 is the
+  fallback, but it runs words together on many PDFs, so install PyMuPDF)
 - Split text into chunks at semantic breakpoints (where the topic changes)
 - Store chunks in ChromaDB collection "R Language Reference"
 - Display progress and final document count
@@ -161,6 +162,24 @@ Run the chunking unit tests with:
 ```bash
 python -m pytest test_chunking.py
 ```
+
+### Comparing the two strategies
+
+`benchmarks/compare_chunking.py` runs a set of questions (`benchmarks/queries.json`,
+five per language from simple to complex) against a `<lang>_fixed` and a
+`<lang>_semantic` collection and records, for each regime, the retrieved
+chunks, whether the top chunks contain the answer's key terms, whether the top
+chunk starts and ends on a clean boundary, and optionally an answer generated
+by an Ollama model plus a 1-5 correctness score from a second judge model.
+
+```bash
+python ingest.py ./r_docs --collection r_fixed --chunking fixed
+python ingest.py ./r_docs --collection r_semantic
+python benchmarks/compare_chunking.py --ollama-url http://127.0.0.1:11434
+```
+
+Results are written to `benchmarks/results.json`; the committed copy is the
+run described in `benchmarks/README.md`.
 
 ### System Status
 
