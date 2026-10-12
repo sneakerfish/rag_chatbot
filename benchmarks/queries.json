@@ -1,0 +1,110 @@
+{
+  "r": {
+    "name": "R",
+    "source": "An Introduction to R (CRAN, R-intro.pdf, 103 pages)",
+    "queries": [
+      {
+        "level": 1,
+        "question": "What does NA mean in R?",
+        "key_terms": ["not available", "is.na"],
+        "reference": "NA is the special value R reserves for a missing or 'not available' element of a vector. Any operation on NA gives NA. is.na(x) returns a logical vector that is TRUE where x is NA. NaN (not a number, e.g. 0/0) is a different value; is.na is TRUE for both while is.nan is TRUE only for NaN."
+      },
+      {
+        "level": 2,
+        "question": "How do I generate a regular sequence of numbers, say from 1 to 30 or in steps of 0.5?",
+        "key_terms": ["1:30", "seq("],
+        "reference": "The colon operator generates integer sequences: 1:30 gives c(1, 2, ..., 30) and 30:1 counts backwards. The colon has high precedence, so 2*1:15 is c(2, 4, ..., 30). seq() is more general: seq(from, to) behaves like the colon, and by= sets the step, e.g. seq(-5, 5, by=.2); length= gives the number of values; rep() replicates a vector."
+      },
+      {
+        "level": 3,
+        "question": "What happens when I add two vectors of different lengths in R?",
+        "key_terms": ["recycled", "longest"],
+        "reference": "Vectors in one expression need not have the same length. The result has the length of the longest vector and shorter vectors are recycled (repeated) as often as needed, possibly fractionally, until they match that length. Constants are recycled too. A warning is given if the longer length is not a multiple of the shorter."
+      },
+      {
+        "level": 4,
+        "question": "What is a factor and how do I use tapply to compute a statistic for each group?",
+        "key_terms": ["factor", "tapply"],
+        "reference": "A factor is a vector object that gives a discrete classification (grouping) of the components of another vector of the same length; it is created with factor(), and levels() lists its categories. tapply(X, INDEX, FUN) applies a function to each group of X defined by the factor INDEX, for example tapply(incomes, statef, mean) gives the mean income for each state. The result has one entry per level of the factor."
+      },
+      {
+        "level": 5,
+        "question": "How do I fit a simple linear regression in R and check its residuals?",
+        "key_terms": ["lm(", "resid"],
+        "reference": "Fit with lm(), e.g. fm <- lm(y ~ x, data = production). summary(fm) prints coefficients, standard errors and t-values; coef(fm) gives the coefficients; resid(fm) or residuals(fm) extracts residuals and fitted(fm) the fitted values. plot(fm) produces diagnostic plots, and qqnorm(resid(fm)) checks residual normality. anova() compares nested models."
+      }
+    ]
+  },
+  "python": {
+    "name": "Python",
+    "source": "The Python Tutorial 3.13 (docs.python.org, tutorial.pdf, 167 pages)",
+    "queries": [
+      {
+        "level": 1,
+        "question": "How do I get the number of items in a list in Python?",
+        "key_terms": ["len("],
+        "reference": "Use the built-in len() function: len(squares) returns the number of items in the list. It works on any sequence, including strings and tuples."
+      },
+      {
+        "level": 2,
+        "question": "What is the difference between a list and a tuple in Python?",
+        "key_terms": ["immutable", "tuple"],
+        "reference": "Both are sequence types. Lists are mutable, usually homogeneous, and items are accessed by iterating. Tuples are immutable, written as comma-separated values optionally in parentheses, often heterogeneous, and accessed by unpacking or indexing. A one-element tuple needs a trailing comma, e.g. ('hello',), and an empty tuple is ()."
+      },
+      {
+        "level": 3,
+        "question": "How do list comprehensions work in Python?",
+        "key_terms": ["list comprehension", "brackets"],
+        "reference": "A list comprehension is a concise way to build a list. It consists of brackets containing an expression followed by a for clause, then zero or more for or if clauses, e.g. [x**2 for x in range(10)] or [(x, y) for x in [1,2,3] for y in [3,1,4] if x != y]. The result is a new list from evaluating the expression in the context of the for and if clauses. Comprehensions can be nested."
+      },
+      {
+        "level": 4,
+        "question": "Why is using a mutable object like a list as a default argument value a problem in Python?",
+        "key_terms": ["default", "accumulates"],
+        "reference": "A default value is evaluated only once, when the function is defined. If the default is a mutable object such as a list or dictionary, it is shared between calls, so a function like def f(a, L=[]): L.append(a); return L accumulates values across calls: f(1) then f(2) gives [1, 2]. To avoid this, use None as the default and create the list inside the function body."
+      },
+      {
+        "level": 5,
+        "question": "What are generators, how does yield work, and how do generator expressions differ from generator functions?",
+        "key_terms": ["yield", "generator expression"],
+        "reference": "Generators are written like regular functions but use the yield statement to return data one item at a time. Each time next() is called the generator resumes where it left off; all local variables and execution state are saved automatically between calls, so they are compact compared with class-based iterators, and they raise StopIteration when they finish. Generator expressions use a syntax like list comprehensions but with parentheses, e.g. sum(i*i for i in range(10)); they are more compact but less versatile than full generator definitions and more memory friendly than list comprehensions."
+      }
+    ]
+  },
+  "julia": {
+    "name": "Julia",
+    "source": "The Julia Language 1.13.0 manual (julia-1.13.0.pdf, 1956 pages)",
+    "queries": [
+      {
+        "level": 1,
+        "question": "What does an exclamation mark at the end of a function name mean in Julia?",
+        "key_terms": ["modify", "!"],
+        "reference": "By convention, a function whose name ends in ! modifies (mutates) one or more of its arguments, e.g. sort!(v) sorts v in place while sort(v) returns a new sorted copy. The ! is a naming convention, not enforced by the language."
+      },
+      {
+        "level": 2,
+        "question": "What is multiple dispatch in Julia?",
+        "key_terms": ["multiple dispatch", "methods"],
+        "reference": "Multiple dispatch means that which method of a function runs is chosen based on the types of all of its arguments, not just the first one. A function can have many methods, each defined for different argument type signatures, and Julia picks the most specific method matching the runtime argument types. methods(f) lists them. This is the core paradigm of Julia."
+      },
+      {
+        "level": 3,
+        "question": "How does the dot syntax for broadcasting work in Julia?",
+        "key_terms": ["broadcast", "dot"],
+        "reference": "Any function f can be applied elementwise with f.(x) — the dot call syntax — which is equivalent to broadcast(f, x). Operators also have dotted forms such as .+ and .*. Nested dot calls in one expression fuse into a single loop without temporary arrays, and .= assigns in place. Broadcasting expands arrays of different shapes (e.g. a column and a row) to a common shape and handles scalars."
+      },
+      {
+        "level": 4,
+        "question": "What is the difference between an abstract type and a concrete type in Julia, and how do I declare a subtype?",
+        "key_terms": ["abstract type", "<:"],
+        "reference": "Abstract types (declared with abstract type Name end) cannot be instantiated; they are nodes in the type graph that group concrete types and let you write methods for whole families of types. Concrete types such as Int64 or a struct can be instantiated and have no subtypes. A subtype is declared with the <: operator, e.g. abstract type Number end; abstract type Real <: Number end; struct Point <: Real ... end. <: is also used to test subtyping, e.g. Int64 <: Real."
+      },
+      {
+        "level": 5,
+        "question": "How do macros differ from functions in Julia, and how do I define one?",
+        "key_terms": ["macro", "parse"],
+        "reference": "A macro maps a tuple of argument expressions to a returned expression; it runs at parse time (when code is parsed), before the code is compiled or executed, whereas a function runs at runtime on values. Macros are defined with macro name(args...) ... end and invoked with @name args; they receive their arguments as unevaluated expressions (Expr objects) and the returned expression is spliced into the program. Quoting (:( ... ) or quote ... end) and interpolation ($x) are used to build the returned expression, and esc() controls hygiene."
+      }
+    ]
+  }
+}

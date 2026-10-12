@@ -1,0 +1,144 @@
+{
+  "julia": {
+    "name": "Julia",
+    "source": "Three Julia PDFs from a personal library (2,613 pages): The Julia Language 1.12.6 manual (1,897), Mastering Julia (506) and Julia High Performance (210)",
+    "queries": [
+      {
+        "level": 1,
+        "question": "What does an exclamation mark at the end of a function name mean in Julia?",
+        "key_terms": [
+          "modify",
+          "!"
+        ],
+        "reference": "By convention, a function whose name ends in ! modifies (mutates) one or more of its arguments, e.g. sort!(v) sorts v in place while sort(v) returns a new sorted copy. The ! is a naming convention, not enforced by the language."
+      },
+      {
+        "level": 2,
+        "question": "What is multiple dispatch in Julia?",
+        "key_terms": [
+          "multiple dispatch",
+          "methods"
+        ],
+        "reference": "Multiple dispatch means that which method of a function runs is chosen based on the types of all of its arguments, not just the first one. A function can have many methods, each defined for different argument type signatures, and Julia picks the most specific method matching the runtime argument types. methods(f) lists them. This is the core paradigm of Julia."
+      },
+      {
+        "level": 3,
+        "question": "How does the dot syntax for broadcasting work in Julia?",
+        "key_terms": [
+          "broadcast",
+          "dot"
+        ],
+        "reference": "Any function f can be applied elementwise with f.(x) — the dot call syntax — which is equivalent to broadcast(f, x). Operators also have dotted forms such as .+ and .*. Nested dot calls in one expression fuse into a single loop without temporary arrays, and .= assigns in place. Broadcasting expands arrays of different shapes (e.g. a column and a row) to a common shape and handles scalars."
+      },
+      {
+        "level": 4,
+        "question": "What is the difference between an abstract type and a concrete type in Julia, and how do I declare a subtype?",
+        "key_terms": [
+          "abstract type",
+          "<:"
+        ],
+        "reference": "Abstract types (declared with abstract type Name end) cannot be instantiated; they are nodes in the type graph that group concrete types and let you write methods for whole families of types. Concrete types such as Int64 or a struct can be instantiated and have no subtypes. A subtype is declared with the <: operator, e.g. abstract type Number end; abstract type Real <: Number end; struct Point <: Real ... end. <: is also used to test subtyping, e.g. Int64 <: Real."
+      },
+      {
+        "level": 5,
+        "question": "How do macros differ from functions in Julia, and how do I define one?",
+        "key_terms": [
+          "macro",
+          "parse"
+        ],
+        "reference": "A macro maps a tuple of argument expressions to a returned expression; it runs at parse time (when code is parsed), before the code is compiled or executed, whereas a function runs at runtime on values. Macros are defined with macro name(args...) ... end and invoked with @name args; they receive their arguments as unevaluated expressions (Expr objects) and the returned expression is spliced into the program. Quoting (:( ... ) or quote ... end) and interpolation ($x) are used to build the returned expression, and esc() controls hygiene."
+      },
+      {
+        "level": 1,
+        "question": "How do I put the value of a variable inside a string in Julia?",
+        "key_terms": [
+          "interpolat",
+          "$"
+        ],
+        "reference": "Julia supports string interpolation with $. Inside a string literal, $name is replaced by the value of the variable, e.g. \"Hello, $name\". A whole expression can be interpolated with $(...), e.g. \"1 + 2 = $(1 + 2)\". Non-string values are converted with string(). A literal dollar sign must be escaped as \\$."
+      },
+      {
+        "level": 1,
+        "question": "How do I write an anonymous function in Julia?",
+        "key_terms": [
+          "anonymous",
+          "->"
+        ],
+        "reference": "Use the arrow syntax: x -> x^2 + 2x - 1 creates a function without a name. The longer form is function (x) ... end. Several arguments are written as a tuple, (x, y, z) -> 2x + y - z, and no arguments as () -> 3. Anonymous functions are mostly passed to other functions such as map, e.g. map(x -> x^2, [1, 2, 3]); for longer bodies a do block does the same job."
+      },
+      {
+        "level": 2,
+        "question": "What is the difference between struct and mutable struct in Julia?",
+        "key_terms": [
+          "mutable struct",
+          "immutable"
+        ],
+        "reference": "Composite types declared with struct are immutable: the fields of an instance cannot be changed after construction (a mutable object stored in a field, such as an array, can still be modified). Declaring the type with mutable struct allows fields to be reassigned. Immutable objects can be copied freely and stored efficiently by the compiler, often avoiding heap allocation, whereas mutable objects are generally heap-allocated and identified by a stable address."
+      },
+      {
+        "level": 2,
+        "question": "How do I handle errors with try and catch in Julia, and what does finally do?",
+        "key_terms": [
+          "try",
+          "catch",
+          "finally"
+        ],
+        "reference": "Wrap the code in try ... catch ... end. If an exception is thrown (with throw or error) inside the try block, control passes to the catch block; catch e binds the exception object to e so it can be inspected, and rethrow() passes it on. A finally clause holds code that runs when the try block exits no matter how, whether normally, by exception or by return, and is used for cleanup such as closing a file."
+      },
+      {
+        "level": 3,
+        "question": "What is type stability in Julia and why does it matter for performance?",
+        "key_terms": [
+          "stab",
+          "compiler"
+        ],
+        "reference": "A function is type-stable when the type of its return value depends only on the types of its arguments, not on their values, and variables inside it keep one type. With type-stable code the compiler can infer concrete types and emit specialised, fast machine code. Type-unstable code forces values to be boxed and dispatched at run time, causing allocations and slow execution. @code_warntype shows inferred types and highlights instabilities; typical fixes are returning zero(x) or oftype(x, y) rather than a literal of a different type and not changing a variable's type inside a function."
+      },
+      {
+        "level": 3,
+        "question": "Why are global variables slow in Julia and what should I do about it?",
+        "key_terms": [
+          "global",
+          "const"
+        ],
+        "reference": "The value and the type of an untyped global variable can change at any moment, so the compiler cannot infer its type and cannot optimise code that uses it. The fixes are to declare the global as const, or give it a type annotation, or better pass the value into functions as an argument. In general performance-critical code should live inside functions rather than at global scope."
+      },
+      {
+        "level": 3,
+        "question": "What does the @inbounds macro do in Julia?",
+        "key_terms": [
+          "@inbounds",
+          "bounds check"
+        ],
+        "reference": "@inbounds turns off array bounds checking inside the expression it annotates, which removes a check from every array access and can speed up tight loops and enable further optimisations such as SIMD. It is unsafe: if an index is actually out of bounds the program may crash or silently corrupt memory, so the programmer must be certain the indices are valid. Bounds checking can be forced on or off globally with the --check-bounds command line option."
+      },
+      {
+        "level": 4,
+        "question": "What is a parametric type in Julia, and is Point{Float64} a subtype of Point{Real}?",
+        "key_terms": [
+          "Point{Float64}",
+          "Point{Real}"
+        ],
+        "reference": "A type can take parameters: struct Point{T} x::T; y::T end declares a whole family of types, one for each T, such as the concrete type Point{Float64}. Point itself is a valid type (a UnionAll) containing all of them, so Point{Float64} <: Point. Type parameters are invariant: Point{Float64} is NOT a subtype of Point{Real} even though Float64 <: Real. To accept any Point with a real parameter write Point{<:Real}, or a method with where T<:Real."
+      },
+      {
+        "level": 4,
+        "question": "How do I run a for loop on multiple threads in Julia, and how do I set the number of threads?",
+        "key_terms": [
+          "@threads",
+          "JULIA_NUM_THREADS"
+        ],
+        "reference": "Julia must be started with more than one thread, using the -t/--threads command line option (e.g. julia --threads 4, or auto) or the JULIA_NUM_THREADS environment variable; Threads.nthreads() reports the count. Prefixing a for loop with Threads.@threads splits the iteration space across the threads. The loop body must be free of data races: do not write to shared variables without a lock or atomic operations. Threads.@spawn runs individual tasks on any available thread."
+      },
+      {
+        "level": 5,
+        "question": "How do I call a C function from Julia?",
+        "key_terms": [
+          "ccall",
+          "library"
+        ],
+        "reference": "Julia calls C directly with no glue code or compilation step. Use the @ccall macro, @ccall library.function(arg::Type)::ReturnType, or the ccall form: ccall((:function, \"library\"), ReturnType, (ArgType1, ...), arg1, ...). The code must be available as a shared library; functions in the C standard library can be named without a library, e.g. ccall(:clock, Int32, ()). Argument and return types use Julia's C-compatible aliases such as Cint, Cdouble and Cstring, and arguments are converted automatically."
+      }
+    ]
+  }
+}
