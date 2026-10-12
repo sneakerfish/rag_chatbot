@@ -257,6 +257,14 @@ To extend this system:
 3. **Add New Models**: Update the models list and ensure they're installed in Ollama
 4. **Enhance UI**: Modify the Gradio interface in `chatbot_app.py`
 
+## Credits
+
+Semantic breakpoint chunking was suggested by
+[@antropoblue.bsky.social](https://bsky.app/profile/antropoblue.bsky.social) in a
+[Bluesky quote post](https://bsky.app/profile/antropoblue.bsky.social/post/3lxui5346jm2w)
+on 2 September 2025: "Consider adding semantic chunking for technical docs—fixed-size
+chunks often split concepts mid-explanation, reducing retrieval quality."
+
 ## License
 
 This project is open source. Feel free to modify and distribute according to your needs.

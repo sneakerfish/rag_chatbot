@@ -53,6 +53,41 @@ Julia losses (broadcasting, macros) the 4B answer model hallucinated syntax
 from a correct but shorter context. Semantic chunks are on average shorter and
 carry no overlap, so a small model occasionally gets less to work with.
 
+## Second run: a personal Julia library (2026-10-11)
+
+The same comparison on three Julia PDFs in one collection (2,613 pages: the
+1.12.6 manual, *Mastering Julia* and *Julia High Performance*), with the five
+Julia questions above plus ten new ones (`queries_julia_books.json`). Answers
+came from `gemma3:4b` and, in a second pass, `gemma4:12b-mlx`; `qwen3.6` (36B)
+judged both.
+
+| Metric | Fixed window | Semantic |
+|---|---:|---:|
+| Chunks | 5,456 | 4,849 |
+| Ingest time | 40 s | 3 min 38 s |
+| Top-1 chunk contains every key term | 5 / 15 | 5 / 15 |
+| Any top-5 chunk contains every key term | 13 / 15 | 10 / 15 |
+| Top-1 chunk starts and ends on a clean boundary | 3 / 15 | 13 / 15 |
+| Mean judge score, `gemma3:4b` answering | 3.47 | 2.93 |
+| Mean judge score, `gemma4:12b-mlx` answering | 3.80 | 4.00 |
+
+Semantic chunking did not repeat its win here. With the 4B model the fixed
+window scored higher on 6 questions and semantic on 2; with the 12B model each
+won 5. Results are in `results_julia_books.json` and
+`results_julia_books_12b.json`, with matching `report_julia_books*.html`. The
+two runs used different answer and judge models from the first run, so compare
+within a run, not across them. Twelve semantic chunks came out shorter than
+`--min-chunk-size`.
+
+Chunks retrieved from the two commercial books are cut to 200 characters in
+the committed result files; chunks from the Julia manual are kept in full.
+
+```bash
+python benchmarks/compare_chunking.py --queries benchmarks/queries_julia_books.json \
+    --output benchmarks/results_julia_books.json \
+    --answer-model gemma3:4b --judge-model qwen3.6:latest
+```
+
 ## Reproduce
 
 ```bash
